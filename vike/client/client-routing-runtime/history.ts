@@ -7,7 +7,9 @@ export {
   monkeyPatchHistoryPushState
 }
 
-import { assert, assertUsage, hasProp, isObject } from './utils.js'
+import { assert, assertUsage, getGlobalObject, hasProp, isObject } from './utils.js'
+
+const globalObject = getGlobalObject('history.ts', { currenState: getState_andEventuallyEnhance() })
 
 type StateVikeEnhanced = {
   timestamp: number
@@ -34,10 +36,15 @@ type StateNotInitialized =
 function initHistoryState() {
   const stateNotInitialized: StateNotInitialized = window.history.state
 
+  const stateVikeEnhanced = enhanceState(stateNotInitialized)
+
+  replaceHistoryState(stateVikeEnhanced)
+}
+
+function enhanceState(stateNotInitialized: StateNotInitialized): StateVikeEnhanced {
   // Already enhanced
   if (isVikeEnhanced(stateNotInitialized)) {
-    assertState(stateNotInitialized)
-    return
+    return stateNotInitialized
   }
 
   const timestamp = getTimestamp()
@@ -52,8 +59,7 @@ function initHistoryState() {
       triggeredBy,
       _isVikeEnhanced: true
     }
-    assertState(stateVikeEnhanced)
-    return
+    assertStateEnhanced(stateVikeEnhanced)
   } else {
     // State information may be incomplete if `window.history.state` is set by an old Vike version. (E.g. `state.timestamp` was introduced for `pageContext.isBackwardNavigation` in `0.4.19`.)
     stateVikeEnhanced = {
@@ -62,16 +68,26 @@ function initHistoryState() {
       triggeredBy: stateNotInitialized.triggeredBy ?? triggeredBy,
       _isVikeEnhanced: true
     }
-    assertState(stateVikeEnhanced)
+    assertStateEnhanced(stateVikeEnhanced)
   }
 
-  replaceHistoryState(stateVikeEnhanced)
+  return stateVikeEnhanced
 }
 
-function getState(): StateVikeEnhanced {
+function getState_assumeAlreadyEnhanced(): StateVikeEnhanced {
+  const { currenState } = globalObject
+  assert(currenState)
+  assert(isVikeEnhanced(currenState))
+  return currenState
+}
+
+function getState_andEventuallyEnhance(): StateVikeEnhanced {
   const state = getHistoryState()
-  assertState(state)
-  return state
+  if (isVikeEnhanced(state)) {
+    return state
+  } else {
+    return enhanceState(state)
+  }
 }
 
 function getHistoryState(): StateNotInitialized {
@@ -89,7 +105,7 @@ function getTimestamp() {
 
 function saveScrollPosition() {
   const scrollPosition = getScrollPosition()
-  const state = getState()
+  const state = getState_assumeAlreadyEnhanced()
   replaceHistoryState({ ...state, scrollPosition })
 }
 
@@ -107,11 +123,11 @@ function pushHistory(url: string, overwriteLastHistoryEntry: boolean) {
       url
     )
   } else {
-    replaceHistoryState(getState(), url)
+    replaceHistoryState(getState_assumeAlreadyEnhanced(), url)
   }
 }
 
-function assertState(state: unknown): asserts state is StateVikeEnhanced {
+function assertStateEnhanced(state: unknown): asserts state is StateVikeEnhanced {
   assert(isObject(state))
   assert(hasProp(state, '_isVikeEnhanced', 'true'))
   assert(hasProp(state, 'timestamp', 'number'))
@@ -146,11 +162,13 @@ function monkeyPatchHistoryPushState() {
           triggeredBy: 'user',
           ...stateOriginal
         }
-    assertState(stateEnhanced)
+    assertStateEnhanced(stateEnhanced)
     return pushStateOriginal!(stateEnhanced, ...rest)
   }
 }
 
 function isVikeEnhanced(state: unknown): state is StateVikeEnhanced {
-  return isObject(state) && '_isVikeEnhanced' in state
+  const yes = isObject(state) && '_isVikeEnhanced' in state
+  if (yes) assertStateEnhanced(state)
+  return yes
 }
