@@ -7,10 +7,14 @@ import { onBrowserHistoryNavigation } from './onBrowserHistoryNavigation.js'
 import { onLinkClick } from './onLinkClick.js'
 import { setupNativeScrollRestoration } from './scrollRestoration.js'
 import { autoSaveScrollPosition } from './setScrollPosition.js'
+import { initPrefetch } from './prefetch.js'
 
 async function installClientRouter() {
   // Init navigation history and scroll restoration
   initHistoryAndScroll()
+
+  // Prefetch page upon mouse hover hovering links or links entering viewport
+  initPrefetch()
 
   // Render initial page
   const renderPromise = render()

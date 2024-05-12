@@ -1,5 +1,6 @@
 export { prefetch }
-export { addLinkPrefetchHandlers }
+export { initPrefetch }
+export { setPrefetchSettings }
 
 import {
   assert,
@@ -16,7 +17,7 @@ import {
   loadUserFilesClientSide
 } from '../shared/loadUserFilesClientSide.js'
 import { skipLink } from './skipLink.js'
-import { getPrefetchSettings } from './prefetch/getPrefetchSettings.js'
+import { type PrefetchSettings, getPrefetchSettings } from './prefetch/getPrefetchSettings.js'
 import { isAlreadyPrefetched, markAsAlreadyPrefetched } from './prefetch/alreadyPrefetched.js'
 import { disableClientRouting } from './renderPageClientSide.js'
 import { isClientSideRoutable } from './isClientSideRoutable.js'
@@ -27,7 +28,8 @@ import { noRouteMatch } from '../../shared/route/noRouteMatch.js'
 assertClientRouting()
 const globalObject = getGlobalObject<{
   linkPrefetchHandlerAdded: WeakMap<HTMLElement, true>
-}>('prefetch.ts', { linkPrefetchHandlerAdded: new WeakMap() })
+  prefetchSettings: PrefetchSettings
+}>('prefetch.ts', { linkPrefetchHandlerAdded: new WeakMap(), prefetchSettings: { prefetchStaticAssets: false } })
 
 async function prefetchAssets(pageId: string, pageContext: PageContextUserFiles): Promise<void> {
   try {
@@ -79,7 +81,8 @@ async function prefetch(url: string): Promise<void> {
   await prefetchAssets(pageId, pageContext)
 }
 
-function addLinkPrefetchHandlers(pageContext: { exports: Record<string, unknown>; urlPathname: string }) {
+function setPrefetchSettings(pageContext: { exports: Record<string, unknown>; urlPathname: string }) {}
+function initPrefetch() {
   // Current URL is already prefetched
   markAsAlreadyPrefetched(pageContext.urlPathname)
 
@@ -111,16 +114,16 @@ function addLinkPrefetchHandlers(pageContext: { exports: Record<string, unknown>
       )
     }
 
-    if (prefetchStaticAssets === 'viewport') {
+    if (prefetchStaticAssets === 'viewport' && !globalObject.observer) {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && entry.target) {
             prefetchIfPossible(url)
             observer.disconnect()
           }
         })
       })
-      observer.observe(linkTag)
+      observer.observe(document.documentElement)
     }
   })
 }

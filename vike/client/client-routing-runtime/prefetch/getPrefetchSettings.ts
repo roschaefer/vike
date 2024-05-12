@@ -1,4 +1,5 @@
 export { getPrefetchSettings }
+export type { PrefetchSettings }
 
 import type { PrefetchStaticAssets } from '../../../shared/types/PrefetchStaticAssets.js'
 import { assert, assertUsage, assertInfo, assertWarning, isPlainObject } from '../utils.js'
