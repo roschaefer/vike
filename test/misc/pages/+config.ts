@@ -6,21 +6,6 @@ export default {
       env: { server: true },
       cumulative: true
     },
-    /*
-    For supporting nested configs, is the following the only thing missing?
-    ```diff
-    // /pages/some-page/+config.js
-
-      export {
-    -   ['document.title']: 'Some Title'
-    +   document: {
-    +     title: 'Some Title'
-    +   }
-      }
-    ```
-
-    Work-in-progress: https://github.com/vikejs/vike/tree/brillout/feat/nested-configs
-    */
     ['document.title']: {
       env: { server: true, client: true }
     }
@@ -30,7 +15,9 @@ export default {
 declare global {
   namespace Vike {
     interface Config {
-      ['document.title']?: string
+      document?: {
+        title?: string
+      }
       frontmatter?: {
         title: string
       }

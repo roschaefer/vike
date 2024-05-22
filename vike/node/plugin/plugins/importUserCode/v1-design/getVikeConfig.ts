@@ -279,6 +279,10 @@ async function loadInterfaceFiles(
     })
   ])
 
+  // TODO: properly resolve configName of nested configs, in this loadInterfaceFiles() function and before the assertAllConfigsAreKnown() call.
+  //  - But I ain't sure whether nested configs are a good idea:
+  //     - It adds complexity for not that much added value (AFAICT the only added value is better categorization of configs).
+  //     - It isn't clear how to define + files for nested configs.
   assertAllConfigsAreKnown(interfaceFilesByLocationId)
 
   return interfaceFilesByLocationId
