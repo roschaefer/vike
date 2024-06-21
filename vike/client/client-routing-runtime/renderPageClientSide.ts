@@ -192,6 +192,7 @@ async function renderPageClientSide(renderArgs: RenderArgs): Promise<void> {
 
     // Get pageContext from hooks (fetched from server, and/or directly called on the client-side)
     if (isHydrationRender) {
+      objectAssign(pageContext, { isHydration: true as const })
       assert(hasProp(pageContext, '_hasPageContextFromServer', 'true'))
       let pageContextFromHooks: Awaited<ReturnType<typeof getPageContextFromHooks_isHydration>>
       try {
@@ -208,6 +209,7 @@ async function renderPageClientSide(renderArgs: RenderArgs): Promise<void> {
       // Render page view
       await renderPageView(pageContext)
     } else {
+      objectAssign(pageContext, { isHydration: false as const })
       // Fetch pageContext from server-side hooks
       let pageContextFromServerHooks: PageContextFromServerHooks
       const prefetchedPageContext = getPrefetchedPageContext(pageContext)
@@ -397,7 +399,7 @@ async function renderPageClientSide(renderArgs: RenderArgs): Promise<void> {
   }
 
   async function renderPageView(
-    pageContext: PageContextBeforeRenderClient & { urlPathname: string },
+    pageContext: PageContextBeforeRenderClient & { urlPathname: string; isHydration: boolean },
     isErrorPage?: { err?: unknown }
   ) {
     const onError = async (err: unknown) => {
