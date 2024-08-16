@@ -3,7 +3,7 @@ export { getConfigBuildErrorFormatted }
 export { getConfigExecutionErrorIntroMsg }
 export { isTemporaryBuildFile }
 
-import { build, type BuildResult, type BuildOptions, formatMessages, type Message } from 'esbuild'
+import { build, type BuildResult, type BuildOptions, formatMessages, type Message, version } from 'esbuild'
 import fs from 'fs'
 import path from 'path'
 import pc from '@brillout/picocolors'
@@ -30,6 +30,9 @@ import { getFilePathAbsoluteUserRootDir } from '../../../../shared/getFilePath.j
 
 assertIsNotProductionRuntime()
 const debug = createDebugger('vike:pointer-imports')
+
+console.log('transpileWithEsbuild.ts', version)
+console.log('require.resolve("vike-react/config")', require.resolve('vike-react/config'))
 
 async function transpileAndExecuteFile(
   filePath: FilePathResolved,
@@ -100,6 +103,7 @@ async function transpileWithEsbuild(
   userRootDir: string,
   transformImports: boolean | 'all'
 ) {
+  console.log('transpileWithEsbuild()')
   const entryFilePath = filePath.filePathAbsoluteFilesystem
   const entryFileDir = path.posix.dirname(entryFilePath)
   const options: BuildOptions = {
@@ -136,6 +140,7 @@ async function transpileWithEsbuild(
         // https://github.com/brillout/esbuild-playground
         build.onResolve({ filter: /.*/ }, async (args) => {
           if (args.kind !== 'import-statement') return
+          console.log('onResolve()', args)
 
           // Avoid infinite loop: https://github.com/evanw/esbuild/issues/3095#issuecomment-1546916366
           const useEsbuildResolver = 'useEsbuildResolver'
@@ -143,7 +148,9 @@ async function transpileWithEsbuild(
           const { path, ...opts } = args
           opts.pluginData = { [useEsbuildResolver]: true }
 
+          console.log('build.resolve()', path, opts)
           const resolved = await build.resolve(path, opts)
+          console.log('build.resolve() done')
 
           if (resolved.errors.length > 0) {
             /* We could do the following to let Node.js throw the error, but we don't because the error shown by esbuild is prettier: the Node.js error refers to the transpiled [build-f7i251e0iwnw]+config.ts.mjs file which isn't that nice, whereas esbuild refers to the source +config.ts file.
